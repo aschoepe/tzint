@@ -45,13 +45,14 @@
 
 #include <tcl.h>
 #include "zint.h"
+#include "manifest.h"
 
 #ifndef FALSE
 #define FALSE 0
 #define TRUE (!FALSE)
 #endif
 
-static char rcs[] = "@(#)tzint.c $Revision: 1.2 $ $Date: 2017/04/18 18:00:09 $ (BSD 3 License) Alexander Schoepe, Joerg Mehring, Bochum, DE";
+static char rcs[] = "@(#)tzint.c $Revision: RELEASE_VERSION $ $Date: MANIFEST_NUMERIC_DATE MANIFEST_NUMERIC_TIME $ MANIFEST_VERSION (BSD 3 License) Alexander Schoepe, Joerg Mehring, Bochum, DE";
 
 static char *symbols[] = {
   "code11",

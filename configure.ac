@@ -19,7 +19,7 @@ dnl	to configure the system for the local environment.
 # so that we create the export library with the dll.
 #-----------------------------------------------------------------------
 
-AC_INIT([tzint], [1.1])
+AC_INIT([tzint], [1.2])
 
 #--------------------------------------------------------------------
 # Call TEA_INIT as the first TEA_ macro to set up initial vars.
@@ -116,7 +116,7 @@ fi
 
 
 AC_DEFINE(ZINT_VERSION, "2.4.4")
-AC_DEFINE(MY_TCL_INITSTUBS, "8.5")
+AC_DEFINE(MY_TCL_INITSTUBS, "8.6-10")
 
 TEA_ADD_SOURCES([common.c render.c png.c library.c ps.c large.c reedsol.c gs1.c svg.c])
 TEA_ADD_SOURCES([code.c code128.c 2of5.c upcean.c telepen.c medical.c plessey.c rss.c])
