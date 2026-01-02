@@ -1396,8 +1396,8 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --enable-filecmd        with file command (png lib needed) (default: on)
-  --enable-pngstatic      link static with libpng.a (default: off)
+  --enable-filecmd         with file command (png lib needed) (default: on)
+  --enable-pngstatic       link static with libpng.a (default: off)
   --enable-threads        build with threads (default: on)
   --enable-shared         build and link with shared libraries (default: on)
   --enable-stubs          build and link with stub libraries. Always true for
@@ -1414,7 +1414,7 @@ Optional Packages:
                           (tclConfig.sh)
   --with-tcl8             Compile for Tcl8 in Tcl9 environment
   --with-png-include=DIR   PNG includes are in DIR
-  --with-png-lib=DIR	  PNG libraries are in DIR
+  --with-png-lib=DIR       PNG libraries are in DIR
   --with-tclinclude       directory containing the public Tcl header files
 
 Some influential environment variables:
@@ -5450,32 +5450,31 @@ printf "%s\n" "$ac_cv_c_bigendian" >&6; }
 # and PKG_TCL_SOURCES.
 #-----------------------------------------------------------------------
 
-# Check whether --enable-filecmd was given.
+
+    # Check whether --enable-filecmd was given.
 if test ${enable_filecmd+y}
 then :
-  enableval=$enable_filecmd; tcl_ok=$enableval
+  enableval=$enable_filecmd; enable_filecmd=$enableval
 else case e in #(
-  e) tcl_ok=yes ;;
+  e) enable_filecmd=yes ;;
 esac
 fi
 
 
-if test "$tcl_ok" = "no"; then
+    if test "$enable_filecmd" = "no"; then
+	printf "%s\n" "#define NO_CMD_FILE 1" >>confdefs.h
 
-    printf "%s\n" "#define NO_CMD_FILE 1" >>confdefs.h
-
-
-else
-
+    else
 
 # Check whether --with-png-include was given.
 if test ${with_png_include+y}
 then :
   withval=$with_png_include; PNG_INC_DIR=$withval
 else case e in #(
-  e) PNG_INC_DIR="/usr/include" ;;
+  e) PNG_INC_DIR="" ;;
 esac
 fi
+
 
 
 # Check whether --with-png-lib was given.
@@ -5483,30 +5482,45 @@ if test ${with_png_lib+y}
 then :
   withval=$with_png_lib; PNG_LIB_DIR=$withval
 else case e in #(
-  e) PNG_LIB_DIR="/usr/lib" ;;
+  e) PNG_LIB_DIR="" ;;
 esac
 fi
 
 
-    # Check whether --enable-pngstatic was given.
+	# Check whether --enable-pngstatic was given.
 if test ${enable_pngstatic+y}
 then :
-  enableval=$enable_pngstatic; tcl_ok=$enableval
+  enableval=$enable_pngstatic; png_static=$enableval
 else case e in #(
-  e) tcl_ok=no ;;
+  e) png_static=no ;;
 esac
 fi
 
 
-
+    #--------------------------------------------------------------------
+    # Search for png.h in common locations
+    #--------------------------------------------------------------------
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for png header" >&5
 printf %s "checking for png header... " >&6; }
-    if test ! -f ${PNG_INC_DIR}/png.h ; then
-	as_fn_error $? "Cannot find png.h in $PNG_INC_DIR use -with-png-include=?" "$LINENO" 5
-    fi
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
 
+    if test "x${PNG_INC_DIR}" = "x" ; then
+	# Search in common locations
+	png_inc_search="/usr/include /usr/local/include /opt/local/include /opt/homebrew/include /usr/include/libpng16 /usr/local/include/libpng16"
+
+	for dir in $png_inc_search ; do
+	    if test -f "$dir/png.h" ; then
+		PNG_INC_DIR="$dir"
+		break
+	    fi
+	done
+    fi
+
+    if test "x${PNG_INC_DIR}" = "x" || test ! -f "${PNG_INC_DIR}/png.h" ; then
+	as_fn_error $? "Cannot find png.h. Use --with-png-include=DIR to specify location" "$LINENO" 5
+    fi
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: ${PNG_INC_DIR}" >&5
+printf "%s\n" "${PNG_INC_DIR}" >&6; }
 
     vars="-I"${PNG_INC_DIR}""
     for i in $vars; do
@@ -5515,22 +5529,46 @@ printf "%s\n" "yes" >&6; }
 
 
 
+    #--------------------------------------------------------------------
+    # Search for libpng in common locations
+    #--------------------------------------------------------------------
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libpng library" >&5
+printf %s "checking for libpng library... " >&6; }
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libpng lib" >&5
-printf %s "checking for libpng lib... " >&6; }
-    if test "$tcl_ok" = "yes"; then
-	if test ! -f ${PNG_LIB_DIR}/libpng.a ; then
-	    as_fn_error $? "Cannot find libpng.a in $PNG_LIB_DIR use --with-png-lib=?" "$LINENO" 5
+    if test "x${PNG_LIB_DIR}" = "x" ; then
+	# Search in common locations
+	png_lib_search="/usr/lib /usr/local/lib /opt/local/lib /opt/homebrew/lib /usr/lib/x86_64-linux-gnu"
+
+	if test "$png_static" = "yes"; then
+	    png_lib_name="libpng.a"
+	else
+	    png_lib_name="libpng${TCL_SHLIB_SUFFIX}"
 	fi
-    else
-	if test ! -f ${PNG_LIB_DIR}/libpng${TCL_SHLIB_SUFFIX} ; then
-	    as_fn_error $? "Cannot find libpng${TCL_SHLIB_SUFFIX} in $PNG_LIB_DIR use --with-png-lib=?" "$LINENO" 5
-	fi
+
+	for dir in $png_lib_search ; do
+	    if test -f "$dir/$png_lib_name" ; then
+		PNG_LIB_DIR="$dir"
+		break
+	    fi
+	    # Also try with version suffix
+	    if test -f "$dir/libpng16${TCL_SHLIB_SUFFIX}" ; then
+		PNG_LIB_DIR="$dir"
+		break
+	    fi
+	done
     fi
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
 
-    if test "$tcl_ok" = "yes"; then
+    if test "x${PNG_LIB_DIR}" = "x" ; then
+	as_fn_error $? "Cannot find libpng. Use --with-png-lib=DIR to specify location" "$LINENO" 5
+    fi
+
+    # Verify the library exists
+    if test "$png_static" = "yes"; then
+	if test ! -f "${PNG_LIB_DIR}/libpng.a" ; then
+	    as_fn_error $? "Cannot find libpng.a in ${PNG_LIB_DIR}" "$LINENO" 5
+	fi
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: ${PNG_LIB_DIR}/libpng.a (static)" >&5
+printf "%s\n" "${PNG_LIB_DIR}/libpng.a (static)" >&6; }
 
     vars="${PNG_LIB_DIR}/libpng.a"
     for i in $vars; do
@@ -5543,6 +5581,11 @@ printf "%s\n" "yes" >&6; }
 
 
     else
+	if test ! -f "${PNG_LIB_DIR}/libpng${TCL_SHLIB_SUFFIX}" && test ! -f "${PNG_LIB_DIR}/libpng16${TCL_SHLIB_SUFFIX}" ; then
+	    as_fn_error $? "Cannot find libpng${TCL_SHLIB_SUFFIX} in ${PNG_LIB_DIR}" "$LINENO" 5
+	fi
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: ${PNG_LIB_DIR}" >&5
+printf "%s\n" "${PNG_LIB_DIR}" >&6; }
 
     vars="-L"${PNG_LIB_DIR}" -lpng"
     for i in $vars; do
@@ -5555,13 +5598,10 @@ printf "%s\n" "yes" >&6; }
 
 
     fi
-
-fi
+    fi
 
 
 printf "%s\n" "#define ZINT_VERSION \"2.4.4\"" >>confdefs.h
-
-printf "%s\n" "#define MY_TCL_INITSTUBS \"8.6-10\"" >>confdefs.h
 
 
 
@@ -9080,18 +9120,6 @@ printf "%s\n" "enabled $tcl_ok debugging" >&6; }
 
 
 #--------------------------------------------------------------------
-# Everyone should be linking against the Tcl stub library.  If you
-# can't for some reason, remove this definition.  If you aren't using
-# stubs, you also need to modify the SHLIB_LD_LIBS setting below to
-# link against the non-stubbed Tcl library.  Add Tk too if necessary.
-#--------------------------------------------------------------------
-
-
-printf "%s\n" "#define USE_TCL_STUBS 1" >>confdefs.h
-
-#AC_DEFINE(USE_TK_STUBS, 1, [Use Tk stubs])
-
-#--------------------------------------------------------------------
 # This macro generates a line to use when building a library.  It
 # depends on values set by the TEA_ENABLE_SHARED, TEA_ENABLE_SYMBOLS,
 # and TEA_LOAD_TCLCONFIG macros above.
@@ -9463,12 +9491,26 @@ printf "%s\n" "${TCLSH_PROG}" >&6; }
 #TEA_PROG_WISH
 
 #--------------------------------------------------------------------
-# Finally, substitute all of the various values into the Makefile.
-# You may alternatively have a special pkgIndex.tcl.in or other files
-# which require substituting th AC variables in.  Include these here.
+# Setup a *Config.sh.in configuration file.
+#--------------------------------------------------------------------
+
+#TEA_EXPORT_CONFIG([sample])
+#AC_SUBST(SAMPLE_VAR)
+
+#--------------------------------------------------------------------
+# Specify files to substitute AC variables in. You may alternatively
+# have a special pkgIndex.tcl.in or other files which require
+# substituting the AC variables in. Include these here.
 #--------------------------------------------------------------------
 
 ac_config_files="$ac_config_files Makefile pkgIndex.tcl"
+
+#AC_CONFIG_FILES([sampleConfig.sh])
+
+#--------------------------------------------------------------------
+# Finally, substitute all of the various values into the files
+# specified with AC_CONFIG_FILES.
+#--------------------------------------------------------------------
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
