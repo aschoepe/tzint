@@ -3,7 +3,7 @@
             libzint from the maintainer Robin Stuart
 	    (backend license BSD-3 since May 2013; see also LICENSE.zint)
 
-    Copyright (C) 2014-2019 Alexander Schoepe, Bochum, DE, <alx.tcl@sowaswie.de>
+    Copyright (C) 2014-2026 Alexander Schoepe, Bochum, DE, <alx.tcl(at)sowaswie.de>
                             Joerg Mehring, Bochum, DE <j.mehring@bjmehring.de>
     All rights reserved.
 
@@ -45,13 +45,13 @@
 
 #include <tcl.h>
 #include "zint.h"
+#include "manifest.h"
 
 #ifndef FALSE
 #define FALSE 0
 #define TRUE (!FALSE)
 #endif
 
-static char rcs[] = "@(#)tzint.c $Revision: 1.2 $ $Date: 2017/04/18 18:00:09 $ (BSD 3 License) Alexander Schoepe, Joerg Mehring, Bochum, DE";
 
 static char *symbols[] = {
   "code11",
@@ -239,7 +239,7 @@ extern int Eps(Tcl_Interp *interp, Tcl_Obj *feps, struct zint_symbol *symbol);
 
 static int HexColorCheck(Tcl_Obj *optval, char *color) {
   char *cp;
-  int len;
+  Tcl_Size len;
 
   cp = Tcl_GetStringFromObj(optval, &len);
   if (len > 0 && *cp == '#') cp++, len--;
@@ -342,7 +342,8 @@ static void Bits(Tcl_Interp *interp, Tcl_Obj *list, char onchar, char offchar, s
 
 
 static int Tzint_Encode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[]) {
-  int err = 0, i, index, cmd, rc, len, ival, angle = 0, stat = -1;
+  int err = 0, i, index, cmd, rc, ival, angle = 0, stat = -1;
+  Tcl_Size len;
   struct zint_symbol *zsymbol;
   char *cp, onchar = '1', offchar = '0';
   double dval;
@@ -884,34 +885,143 @@ static int Tzint_Encode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 }
 
 
-static int Tzint_RcsId(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[]) {
-  Tcl_SetObjResult(interp, Tcl_NewStringObj(rcs, -1));
+/*
+ *-----------------------------------------------------------------------------
+ *
+ * Tzint_Manifest --
+ *
+ *  Returns build manifest information as a Tcl dictionary.
+ *
+ * Results:
+ *  A standard Tcl result.
+ *  Interp result is set to a dictionary containing manifest data.
+ *
+ *-----------------------------------------------------------------------------
+ */
+
+static int
+Tzint_Manifest(
+  void *dummy,
+  Tcl_Interp *interp,
+  int objc,
+  Tcl_Obj *const objv[])
+{
+  static const char vTag[] = "@(#)tzint.c v" RELEASE_VERSION " " MANIFEST_VERSION " " MANIFEST_DATE " (BSD 3 License) Alexander Schoepe, Bochum, DE";
+  (void)vTag;
+
+  if (objc != 1) {
+    Tcl_WrongNumArgs(interp, 1, objv, "");
+    return TCL_ERROR;
+  }
+
+  Tcl_Obj *dictPtr = Tcl_NewDictObj();
+
+  Tcl_DictObjPut(interp, dictPtr,
+    Tcl_NewStringObj("version", -1),
+    Tcl_NewStringObj(RELEASE_VERSION, -1));
+
+  Tcl_DictObjPut(interp, dictPtr,
+    Tcl_NewStringObj("date", -1),
+    Tcl_NewStringObj(MANIFEST_DATE, -1));
+
+  Tcl_DictObjPut(interp, dictPtr,
+    Tcl_NewStringObj("check-in", -1),
+    Tcl_NewStringObj(MANIFEST_VERSION, -1));
+
+  Tcl_DictObjPut(interp, dictPtr,
+    Tcl_NewStringObj("build-hash", -1),
+    Tcl_NewStringObj(FOSSIL_BUILD_HASH, -1));
+
+  Tcl_DictObjPut(interp, dictPtr,
+    Tcl_NewStringObj("uuid", -1),
+    Tcl_NewStringObj(MANIFEST_UUID, -1));
+
+  Tcl_SetObjResult(interp, dictPtr);
   return TCL_OK;
 }
 
 
-#ifdef _WINDOWS
-DECLSPEC_EXPORT
-#endif
-int Tzint_Init(Tcl_Interp *interp) {
-#ifdef USE_TCL_STUBS
-  if (Tcl_InitStubs(interp, MY_TCL_INITSTUBS, 0) == NULL) {
-    return TCL_ERROR;
-  }
+#ifndef STRINGIFY
+#  define STRINGIFY(x) STRINGIFY1(x)
+#  define STRINGIFY1(x) #x
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif  /* __cplusplus */
+DLLEXPORT int
+Tzint_Init(Tcl_Interp *interp) {
+   Tcl_CmdInfo info;
+
+  // Support any Tcl version from 8.5.0 to 9.x.x, the upper bound is exclusiv.
+  if (Tcl_InitStubs(interp, "8.5-10", 0) == NULL) {
+    return TCL_ERROR;
+  }
+
+    // Build Info Command - command to return build info for package
+  if (Tcl_GetCommandInfo(interp, "::tcl::build-info", &info)) {
+    Tcl_CreateObjCommand(interp, "::tzint::build-info",
+      info.objProc, (void *)(
+		    PACKAGE_VERSION "+" STRINGIFY(MANIFEST_UUID)
+#if defined(__clang__) && defined(__clang_major__)
+			    ".clang-" STRINGIFY(__clang_major__)
+#if __clang_minor__ < 10
+			    "0"
+#endif
+			    STRINGIFY(__clang_minor__)
+#endif
+#if defined(__cplusplus) && !defined(__OBJC__)
+			    ".cplusplus"
+#endif
+#ifndef NDEBUG
+			    ".debug"
+#endif
+#if !defined(__clang__) && !defined(__INTEL_COMPILER) && defined(__GNUC__)
+			    ".gcc-" STRINGIFY(__GNUC__)
+#if __GNUC_MINOR__ < 10
+			    "0"
+#endif
+			    STRINGIFY(__GNUC_MINOR__)
+#endif
+#ifdef __INTEL_COMPILER
+			    ".icc-" STRINGIFY(__INTEL_COMPILER)
+#endif
+#ifdef TCL_MEM_DEBUG
+			    ".memdebug"
+#endif
+#if defined(_MSC_VER)
+			    ".msvc-" STRINGIFY(_MSC_VER)
+#endif
+#ifdef USE_NMAKE
+			    ".nmake"
+#endif
+#ifndef TCL_CFG_OPTIMIZED
+			    ".no-optimize"
+#endif
+#ifdef __OBJC__
+			    ".objective-c"
+#if defined(__cplusplus)
+			    "plusplus"
+#endif
+#endif
+#ifdef TCL_CFG_PROFILED
+			    ".profile"
+#endif
+#ifdef PURIFY
+			    ".purify"
+#endif
+#ifdef STATIC_BUILD
+			    ".static"
+#endif
+		), NULL);
+  }
+
   Tcl_CreateObjCommand(interp, "::tzint::Encode", Tzint_Encode, (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);
-  Tcl_CreateObjCommand(interp, "::tzint::RcsId", Tzint_RcsId, (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);
+  Tcl_CreateObjCommand(interp, "::tzint::manifest", Tzint_Manifest, (void *)NULL, (Tcl_CmdDeleteProc *)NULL);
 
   Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_VERSION);
   return TCL_OK;
 }
-
-
-#ifdef _WINDOWS
-DECLSPEC_EXPORT
-#endif
-int Tzint_SafeInit(Tcl_Interp *interp) {
-  return Tzint_Init(interp);
+#ifdef __cplusplus
 }
-
+#endif  /* __cplusplus */

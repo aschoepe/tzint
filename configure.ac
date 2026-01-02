@@ -4,7 +4,7 @@ dnl	generate the file "configure", which is run during Tcl installation
 dnl	to configure the system for the local environment.
 
 #-----------------------------------------------------------------------
-# Sample configure.in for Tcl Extensions.  The only places you should
+# Sample configure.ac for Tcl Extensions.  The only places you should
 # need to modify this file are marked by the string __CHANGE__
 #-----------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ dnl	to configure the system for the local environment.
 # so that we create the export library with the dll.
 #-----------------------------------------------------------------------
 
-AC_INIT([tzint], [1.1])
+AC_INIT([tzint], [1.2])
 
 #--------------------------------------------------------------------
 # Call TEA_INIT as the first TEA_ macro to set up initial vars.
@@ -71,52 +71,9 @@ TEA_SETUP_COMPILER
 # and PKG_TCL_SOURCES.
 #-----------------------------------------------------------------------
 
-AC_ARG_ENABLE(filecmd, [  --enable-filecmd        with file command (png lib needed) (default: on)], [tcl_ok=$enableval], [tcl_ok=yes])
-
-if test "$tcl_ok" = "no"; then
-
-    AC_DEFINE(NO_CMD_FILE)
-
-else
-
-    AC_ARG_WITH(png-include, [  --with-png-include=DIR   PNG includes are in DIR], PNG_INC_DIR=$withval, PNG_INC_DIR="/usr/include")
-    AC_ARG_WITH(png-lib, [  --with-png-lib=DIR	  PNG libraries are in DIR], PNG_LIB_DIR=$withval, PNG_LIB_DIR="/usr/lib")
-
-    AC_ARG_ENABLE(pngstatic, [  --enable-pngstatic      link static with libpng.a (default: off)], [tcl_ok=$enableval], [tcl_ok=no])
-
-
-    AC_MSG_CHECKING([for png header])
-    if test ! -f ${PNG_INC_DIR}/png.h ; then
-	AC_MSG_ERROR(Cannot find png.h in $PNG_INC_DIR use -with-png-include=?)
-    fi
-    AC_MSG_RESULT([yes])
-
-    TEA_ADD_INCLUDES([-I"${PNG_INC_DIR}"])
-
-
-    AC_MSG_CHECKING([for libpng lib])
-    if test "$tcl_ok" = "yes"; then
-	if test ! -f ${PNG_LIB_DIR}/libpng.a ; then
-	    AC_MSG_ERROR(Cannot find libpng.a in $PNG_LIB_DIR use --with-png-lib=?)
-	fi
-    else 
-	if test ! -f ${PNG_LIB_DIR}/libpng${TCL_SHLIB_SUFFIX} ; then
-	    AC_MSG_ERROR(Cannot find libpng${TCL_SHLIB_SUFFIX} in $PNG_LIB_DIR use --with-png-lib=?)
-	fi
-    fi
-    AC_MSG_RESULT([yes])
-
-    if test "$tcl_ok" = "yes"; then
-	TEA_ADD_LIBS([${PNG_LIB_DIR}/libpng.a])
-    else
-	TEA_ADD_LIBS([-L"${PNG_LIB_DIR}" -lpng])
-    fi
-
-fi
-
+TZINT_PATH_PNG
 
 AC_DEFINE(ZINT_VERSION, "2.4.4")
-AC_DEFINE(MY_TCL_INITSTUBS, "8.5")
 
 TEA_ADD_SOURCES([common.c render.c png.c library.c ps.c large.c reedsol.c gs1.c svg.c])
 TEA_ADD_SOURCES([code.c code128.c 2of5.c upcean.c telepen.c medical.c plessey.c rss.c])
@@ -200,16 +157,6 @@ TEA_CONFIG_CFLAGS
 TEA_ENABLE_SYMBOLS
 
 #--------------------------------------------------------------------
-# Everyone should be linking against the Tcl stub library.  If you
-# can't for some reason, remove this definition.  If you aren't using
-# stubs, you also need to modify the SHLIB_LD_LIBS setting below to
-# link against the non-stubbed Tcl library.  Add Tk too if necessary.
-#--------------------------------------------------------------------
-
-AC_DEFINE(USE_TCL_STUBS, 1, [Use Tcl stubs])
-#AC_DEFINE(USE_TK_STUBS, 1, [Use Tk stubs])
-
-#--------------------------------------------------------------------
 # This macro generates a line to use when building a library.  It
 # depends on values set by the TEA_ENABLE_SHARED, TEA_ENABLE_SYMBOLS,
 # and TEA_LOAD_TCLCONFIG macros above.
@@ -229,9 +176,24 @@ TEA_PROG_TCLSH
 #TEA_PROG_WISH
 
 #--------------------------------------------------------------------
-# Finally, substitute all of the various values into the Makefile.
-# You may alternatively have a special pkgIndex.tcl.in or other files
-# which require substituting th AC variables in.  Include these here.
+# Setup a *Config.sh.in configuration file.
 #--------------------------------------------------------------------
 
-AC_OUTPUT([Makefile pkgIndex.tcl])
+#TEA_EXPORT_CONFIG([sample])
+#AC_SUBST(SAMPLE_VAR)
+
+#--------------------------------------------------------------------
+# Specify files to substitute AC variables in. You may alternatively
+# have a special pkgIndex.tcl.in or other files which require
+# substituting the AC variables in. Include these here.
+#--------------------------------------------------------------------
+
+AC_CONFIG_FILES([Makefile pkgIndex.tcl])
+#AC_CONFIG_FILES([sampleConfig.sh])
+
+#--------------------------------------------------------------------
+# Finally, substitute all of the various values into the files
+# specified with AC_CONFIG_FILES.
+#--------------------------------------------------------------------
+
+AC_OUTPUT
