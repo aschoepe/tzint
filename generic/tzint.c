@@ -239,7 +239,7 @@ extern int Eps(Tcl_Interp *interp, Tcl_Obj *feps, struct zint_symbol *symbol);
 
 static int HexColorCheck(Tcl_Obj *optval, char *color) {
   char *cp;
-  int len;
+  Tcl_Size len;
 
   cp = Tcl_GetStringFromObj(optval, &len);
   if (len > 0 && *cp == '#') cp++, len--;
@@ -342,7 +342,8 @@ static void Bits(Tcl_Interp *interp, Tcl_Obj *list, char onchar, char offchar, s
 
 
 static int Tzint_Encode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[]) {
-  int err = 0, i, index, cmd, rc, len, ival, angle = 0, stat = -1;
+  int err = 0, i, index, cmd, rc, ival, angle = 0, stat = -1;
+  Tcl_Size len;
   struct zint_symbol *zsymbol;
   char *cp, onchar = '1', offchar = '0';
   double dval;
